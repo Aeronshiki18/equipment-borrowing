@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan; // ADDED: Required for migrations
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\BorrowRequestController;
@@ -9,6 +10,45 @@ use App\Http\Controllers\AdminEquipmentController;
 use App\Http\Controllers\AdminRequestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+
+/*
+|--------------------------------------------------------------------------
+| TEMPORARY DATABASE SETUP ROUTE (DELETE AFTER USE)
+|--------------------------------------------------------------------------
+*/
+Route::get('/setup-database-secretly', function () {
+    // Secret token to prevent others from running this
+    if (request('token') !== 'luigi123') {
+        abort(403, 'Unauthorized action.');
+    }
+
+    try {
+        // 1. Create the tables
+        Artisan::call('migrate', ['--force' => true]);
+        $migrateOutput = Artisan::output();
+
+        // 2. Add the default Admin/Staff users
+        Artisan::call('db:seed', ['--force' => true]);
+        $seedOutput = Artisan::output();
+
+        return response()->json([
+            'status' => 'Success',
+            'migrations' => $migrateOutput,
+            'seeders' => $seedOutput,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'Error',
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+});
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment.index');
